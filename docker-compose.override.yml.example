@@ -1,0 +1,11 @@
+# Example override file for local development
+# Copy this to docker-compose.override.yml and customize as needed
+version: '3.8'
+
+services:
+  app:
+    environment:
+      TELEGRAM_BOT_TOKEN: your-telegram-bot-token-here
+      TELEGRAM_APPRAISER_WHITELIST: 123456789,987654321
+
+

@@ -1,0 +1,99 @@
+@startuml Application Flow Diagram
+
+title Application Flow - Appraise Service
+
+' ============================================
+' Component Diagram - Architecture Overview
+' ============================================
+
+package "Web Layer (Adapters)" {
+  [UserController]
+  [OrderController]
+  [ReportController]
+}
+
+package "Application Layer" {
+  [UserService]
+  [OrderService]
+  [ReportService]
+}
+
+package "Domain Layer" {
+  [Order Model]
+  [User Model]
+  [Report Model]
+  [OrderStatus Enum]
+}
+
+package "Ports (Interfaces)" {
+  interface "UserRepository" as IUserRepo
+  interface "OrderRepository" as IOrderRepo
+  interface "ReportRepository" as IReportRepo
+  interface "EventPublisher" as IEventPublisher
+  interface "TelegramNotificationService" as ITelegramNotif
+}
+
+package "Persistence Adapters" {
+  [OrderRepositoryAdapter]
+  [UserRepositoryAdapter]
+  [ReportRepositoryAdapter]
+  [JPA Repositories]
+  database "PostgreSQL" as DB
+}
+
+package "Messaging Adapters" {
+  [EventPublisherAdapter]
+  [OrderEventListener]
+}
+
+package "External Services" {
+  [TelegramNotificationServiceAdapter]
+  cloud "Telegram API" as TelegramAPI
+}
+
+' Relationships
+UserController --> UserService
+OrderController --> OrderService
+OrderController --> UserService
+ReportController --> ReportService
+ReportController --> UserService
+
+UserService --> IUserRepo
+OrderService --> IOrderRepo
+OrderService --> IEventPublisher
+ReportService --> IReportRepo
+ReportService --> IOrderRepo
+
+IUserRepo <|.. UserRepositoryAdapter
+IOrderRepo <|.. OrderRepositoryAdapter
+IReportRepo <|.. ReportRepositoryAdapter
+IEventPublisher <|.. EventPublisherAdapter
+ITelegramNotif <|.. TelegramNotificationServiceAdapter
+
+UserRepositoryAdapter --> JPA
+OrderRepositoryAdapter --> JPA
+ReportRepositoryAdapter --> JPA
+JPA --> DB
+
+EventPublisherAdapter --> OrderEventListener
+OrderEventListener --> ITelegramNotif
+TelegramNotificationServiceAdapter --> TelegramAPI
+
+note right of OrderService
+  Business logic for:
+  - Order creation
+  - Payment processing
+  - Status transitions
+  - Assignment
+end note
+
+note right of OrderEventListener
+  Async event handlers:
+  - OrderCreatedEvent
+  - OrderStatusChangedEvent
+  - Triggers notifications
+  - Auto-transitions status
+end note
+
+@enduml
+

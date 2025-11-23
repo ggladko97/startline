@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: appraise-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: tester
+      POSTGRES_DB: appraise_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - appraise-network
+
+#  app:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    container_name: appraise-service
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/appraise_db
+#      SPRING_DATASOURCE_USERNAME: postgres
+#      SPRING_DATASOURCE_PASSWORD: tester
+#      TELEGRAM_APPRAISER_WHITELIST: ${TELEGRAM_APPRAISER_WHITELIST:-123456789,987654321}
+#      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+#      TELEGRAM_API_URL: ${TELEGRAM_API_URL:-https://api.telegram.org}
+#      TELEGRAM_PLATFORM_ONLY: ${TELEGRAM_PLATFORM_ONLY:-false}
+#    ports:
+#      - "8080:8080"
+#    networks:
+#      - appraise-network
+#    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  appraise-network:
+    driver: bridge
+

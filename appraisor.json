@@ -1,0 +1,344 @@
+{
+  "info": {
+    "name": "Car Appraisal - Appraiser Flow",
+    "description": "Collection representing the appraiser user journey",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "telegramId",
+      "value": "123456789",
+      "type": "string",
+      "description": "Appraiser Telegram ID (must be in whitelist)"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string",
+      "description": "Order ID (set after finding available order)"
+    },
+    {
+      "key": "reportId",
+      "value": "",
+      "type": "string",
+      "description": "Report ID (set after uploading report)"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Register/Login Appraiser",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.collectionVariables.set('userId', jsonData.id);",
+              "    console.log('Appraiser registered with ID: ' + jsonData.id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"telegramId\": 123456789\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/register-appraiser",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "register-appraiser"]
+        },
+        "description": "Register a new appraiser or login if already exists. Telegram ID must be in whitelist."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Current Appraiser Info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/me?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "me"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Get current appraiser information"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get All Assigned Orders",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Get all orders assigned to this appraiser"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Get Order Details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders", "{{orderId}}"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Get order details by order ID. Use this to check order status before taking action."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Assign Order to Self (when status is ASSIGNED)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    console.log('Order assigned. Status: ' + jsonData.status);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}/assign?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders", "{{orderId}}", "assign"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Assign an order to yourself when order status is ASSIGNED"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Change Order Status to IN_PROGRESS",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}/status?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders", "{{orderId}}", "status"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Change order status to IN_PROGRESS when starting work on the appraisal"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Upload Report",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    console.log('Report uploaded successfully');",
+              "    // Report ID is set in order, can be retrieved from order details",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": [],
+              "description": "PDF file containing the appraisal report"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reports/orders/{{orderId}}?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "reports", "orders", "{{orderId}}"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Upload appraisal report PDF. This automatically sets order status to DONE. Order must be in IN_PROGRESS status."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Change Order Status to DONE (if report already uploaded)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"DONE\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}/status?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders", "{{orderId}}", "status"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Change order status to DONE. This is only allowed if report is already attached to the order."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Change Order Status to COMPLETION_FAILURE",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"COMPLETION_FAILURE\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}/status?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders", "{{orderId}}", "status"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Mark order as failed if unable to complete the appraisal"
+      },
+      "response": []
+    },
+    {
+      "name": "10. Get Report by Order ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reports/orders/{{orderId}}?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "reports", "orders", "{{orderId}}"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Download the appraisal report PDF for the order"
+      },
+      "response": []
+    },
+    {
+      "name": "11. Get Report by Report ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reports/{{reportId}}?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "reports", "{{reportId}}"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Download the appraisal report PDF by report ID"
+      },
+      "response": []
+    }
+  ]
+}
+

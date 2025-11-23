@@ -1,0 +1,245 @@
+@startuml Sequence Diagrams
+
+title Application Flow - Sequence Diagrams
+
+' ============================================
+' Sequence 1: Create Order Flow
+' ============================================
+
+== Create Order Flow ==
+
+actor Client
+participant "OrderController" as Controller
+participant "UserService" as UserSvc
+participant "OrderService" as OrderSvc
+participant "OrderRepository\nAdapter" as OrderRepo
+participant "EventPublisher\nAdapter" as EventPub
+participant "OrderEventListener" as EventListener
+participant "TelegramNotification\nService" as TelegramSvc
+database "PostgreSQL" as DB
+cloud "Telegram API" as TelegramAPI
+
+Client -> Controller: POST /api/v1/orders\n(telegramId, carAdUrl, location, price)
+activate Controller
+
+Controller -> UserSvc: getUserByTelegramId(telegramId)
+activate UserSvc
+UserSvc -> UserSvc: Find user in repository
+UserSvc --> Controller: User
+deactivate UserSvc
+
+Controller -> OrderSvc: createOrder(clientId, carAdUrl, location, price)
+activate OrderSvc
+
+OrderSvc -> OrderSvc: Build Order (status: CREATED)
+OrderSvc -> OrderRepo: save(order)
+activate OrderRepo
+OrderRepo -> DB: Save OrderEntity
+DB --> OrderRepo: Saved entity
+OrderRepo --> OrderSvc: Order (domain)
+deactivate OrderRepo
+
+OrderSvc -> EventPub: publishOrderCreated(order)
+activate EventPub
+EventPub -> EventPub: Create OrderCreatedEvent
+EventPub --> EventListener: Publish event (async)
+deactivate EventPub
+
+OrderSvc --> Controller: Order
+deactivate OrderSvc
+
+Controller -> Controller: Convert to OrderResponse
+Controller --> Client: 201 Created + OrderResponse
+deactivate Controller
+
+... Async Event Processing ...
+
+activate EventListener
+EventListener -> TelegramSvc: sendNotificationToAppraisers(message, orderId)
+activate TelegramSvc
+TelegramSvc -> TelegramSvc: Get all appraisers
+TelegramSvc -> TelegramAPI: Send message to each appraiser
+TelegramAPI --> TelegramSvc: Success
+deactivate TelegramSvc
+EventListener -> OrderRepo: Update status to APPRAISOR_SEARCH
+activate OrderRepo
+OrderRepo -> DB: Update order status
+deactivate OrderRepo
+deactivate EventListener
+
+' ============================================
+' Sequence 2: Pay Order Flow
+' ============================================
+
+== Pay Order Flow ==
+
+Client -> Controller: POST /api/v1/orders/{id}/pay\n(telegramId)
+activate Controller
+
+Controller -> UserSvc: getUserByTelegramId(telegramId)
+activate UserSvc
+UserSvc --> Controller: User
+deactivate UserSvc
+
+Controller -> OrderSvc: payOrder(orderId, clientId)
+activate OrderSvc
+
+OrderSvc -> OrderRepo: findById(orderId)
+activate OrderRepo
+OrderRepo -> DB: Query order
+DB --> OrderRepo: OrderEntity
+OrderRepo --> OrderSvc: Order
+deactivate OrderRepo
+
+OrderSvc -> OrderSvc: Validate client ownership
+OrderSvc -> OrderSvc: Validate status == CREATED
+OrderSvc -> OrderSvc: Set status = PAID
+
+OrderSvc -> OrderRepo: save(order)
+activate OrderRepo
+OrderRepo -> DB: Update order
+DB --> OrderRepo: Updated entity
+OrderRepo --> OrderSvc: Order
+deactivate OrderRepo
+
+OrderSvc -> EventPub: publishOrderStatusChanged(order)
+activate EventPub
+EventPub -> EventPub: Create OrderStatusChangedEvent
+EventPub --> EventListener: Publish event (async)
+deactivate EventPub
+
+OrderSvc --> Controller: Order
+deactivate OrderSvc
+
+Controller --> Client: 200 OK + OrderResponse
+deactivate Controller
+
+' ============================================
+' Sequence 3: Assign Order & Upload Report Flow
+' ============================================
+
+== Assign Order & Upload Report Flow ==
+
+actor Appraiser
+participant "OrderController" as OrderCtrl
+participant "ReportController" as ReportCtrl
+participant "UserService" as UserSvc
+participant "OrderService" as OrderSvc
+participant "ReportService" as ReportSvc
+participant "OrderRepository\nAdapter" as OrderRepo
+participant "ReportRepository\nAdapter" as ReportRepo
+database "PostgreSQL" as DB
+
+' Step 1: Appraiser assigns order
+Appraiser -> OrderCtrl: POST /api/v1/orders/{id}/assign\n(telegramId)
+activate OrderCtrl
+
+OrderCtrl -> UserSvc: getUserByTelegramId(telegramId)
+activate UserSvc
+UserSvc --> OrderCtrl: User (APPRAISER)
+deactivate UserSvc
+
+OrderCtrl -> OrderSvc: assignOrderToAppraiser(orderId, appraiserId)
+activate OrderSvc
+
+OrderSvc -> OrderRepo: findById(orderId)
+activate OrderRepo
+OrderRepo -> DB: Query order
+DB --> OrderRepo: OrderEntity
+OrderRepo --> OrderSvc: Order
+deactivate OrderRepo
+
+OrderSvc -> OrderSvc: Validate status == ASSIGNED
+OrderSvc -> OrderSvc: Set appraiserId
+
+OrderSvc -> OrderRepo: save(order)
+activate OrderRepo
+OrderRepo -> DB: Update order
+deactivate OrderRepo
+
+OrderSvc --> OrderCtrl: Order
+deactivate OrderSvc
+OrderCtrl --> Appraiser: 200 OK
+deactivate OrderCtrl
+
+... Appraiser works on order ...
+
+' Step 2: Appraiser uploads report
+Appraiser -> ReportCtrl: POST /api/v1/reports/orders/{id}\n(file, telegramId)
+activate ReportCtrl
+
+ReportCtrl -> UserSvc: getUserByTelegramId(telegramId)
+activate UserSvc
+UserSvc --> ReportCtrl: User (APPRAISER)
+deactivate UserSvc
+
+ReportCtrl -> ReportCtrl: Validate role == APPRAISER
+ReportCtrl -> ReportSvc: createReport(orderId, pdfContent, appraiserId)
+activate ReportSvc
+
+ReportSvc -> OrderRepo: findById(orderId)
+activate OrderRepo
+OrderRepo -> DB: Query order
+DB --> OrderRepo: OrderEntity
+OrderRepo --> ReportSvc: Order
+deactivate OrderRepo
+
+ReportSvc -> ReportSvc: Validate appraiser assignment
+ReportSvc -> ReportSvc: Validate status == IN_PROGRESS
+
+ReportSvc -> ReportSvc: Build Report
+ReportSvc -> ReportRepo: save(report)
+activate ReportRepo
+ReportRepo -> DB: Save ReportEntity
+DB --> ReportRepo: Saved entity
+ReportRepo --> ReportSvc: Report
+deactivate ReportRepo
+
+ReportSvc -> OrderRepo: Update order (reportId, status=DONE)
+activate OrderRepo
+OrderRepo -> DB: Update order
+deactivate OrderRepo
+
+ReportSvc --> ReportCtrl: Report
+deactivate ReportSvc
+
+ReportCtrl --> Appraiser: 201 Created
+deactivate ReportCtrl
+
+' ============================================
+' Sequence 4: Order Status Flow
+' ============================================
+
+== Order Status Transition Flow ==
+
+note over OrderSvc
+  Order Status Flow:
+  CREATED → PAID → APPRAISOR_SEARCH → 
+  ASSIGNED → IN_PROGRESS → DONE/COMPLETION_FAILURE
+end note
+
+participant "OrderService" as OrderSvc
+participant "OrderRepository" as OrderRepo
+
+OrderSvc -> OrderSvc: changeOrderStatus(orderId, newStatus, userId, role)
+activate OrderSvc
+
+OrderSvc -> OrderRepo: findById(orderId)
+OrderRepo --> OrderSvc: Order
+
+OrderSvc -> OrderSvc: Validate user authorization
+OrderSvc -> OrderSvc: validateStatusTransition()
+
+alt Valid transition
+  OrderSvc -> OrderSvc: Set new status
+  OrderSvc -> OrderRepo: save(order)
+  OrderSvc -> EventPub: publishOrderStatusChanged(order)
+  OrderSvc --> Controller: Order
+else Invalid transition
+  OrderSvc --> Controller: InvalidOrderStateException
+end
+
+deactivate OrderSvc
+
+@enduml
+

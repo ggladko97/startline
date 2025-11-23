@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: appraise-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/appraise_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:tester}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  security:
+    user:
+      name: admin
+      password: admin
+
+app:
+  telegram:
+    appraiser-whitelist: ${TELEGRAM_APPRAISER_WHITELIST:123456789,987654321,284379635}
+    bot-token: ${TELEGRAM_BOT_TOKEN:8151946431:AAF953f4g9d6nZzeEcO8VG6fmGj-pm3j-Hc}
+    api-url: ${TELEGRAM_API_URL:https://api.telegram.org}
+  security:
+    telegram-platform-only: ${TELEGRAM_PLATFORM_ONLY:false}
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
+  level:
+    com.yhladkevych.appraise: INFO
+    org.springframework: WARN
+

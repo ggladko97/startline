@@ -1,0 +1,17 @@
+.git/
+.gitignore
+.idea/
+*.iml
+.DS_Store
+README.md
+*.md
+docker-compose.yml
+Dockerfile
+.dockerignore
+target/classes/
+target/test-classes/
+target/surefire-reports/
+target/maven-status/
+target/maven-archiver/
+target/original/
+

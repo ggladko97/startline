@@ -1,0 +1,5 @@
+app:
+  security:
+    telegram-platform-only: true
+
+

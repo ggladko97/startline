@@ -1,0 +1,88 @@
+---
+description: Core Java backend rules for code style, clean code, patterns, and testing; optional packs for hexagonal architecture, REST API best practices, and Spring Data that only activate when explicitly requested.
+globs:
+  - "**/*.java"
+  - "pom.xml"
+  - "build.gradle*"
+  - "settings.gradle*"
+  - "**/*.md"
+  - "src/**"
+alwaysApply: true
+---
+
+# Java Backend – Core (Automatic)
+
+## Scope & Intent
+Apply these rules by default for Java backend development. Optimize for clarity, maintainability, and testability. Prefer small, composable units and explicit boundaries.
+
+## Code Style
+- Use Java 17+ idioms. Prefer meaningful, intention-revealing names. Avoid wildcard imports.
+- Keep methods short and single-purpose; minimize parameter lists; prefer value objects over primitive obsession.
+- Favor immutability (`final`) and narrow visibility; avoid global state.
+- Keep packages cohesive; avoid circular dependencies; separate API models from domain entities.
+- Document public APIs with succinct Javadoc for behavior and edge cases when it improves comprehension.
+
+## Clean Code
+- Remove duplication, dead code, magic numbers; extract pure functions; use guard clauses to reduce nesting.
+- Validate inputs at boundaries; fail fast with clear messages; avoid using exceptions for control flow.
+- Use `Optional` for absence in APIs (not for fields). Return empty collections instead of `null`.
+- Do not expose internal collections; prefer interfaces (`List`, `Set`, `Map`) in signatures; provide immutable views.
+
+## Error Handling
+- Prefer unchecked exceptions for programming/validation errors; checked only when callers can recover.
+- Never swallow exceptions; wrap with context and preserve causes; add actionable messages.
+- Standardize error mapping at boundaries (web, messaging, persistence) with consistent payloads/status codes.
+
+## Concurrency & Performance
+- Prefer high-level concurrency utilities; avoid shared mutable state; use confinement/immutability.
+- Add timeouts for I/O and remote calls; consider caching where it clearly helps and define eviction.
+- Measure before optimizing; keep critical sections small; avoid premature async if it reduces clarity.
+
+## Design Patterns (Tactical)
+- Use patterns to clarify intent, not add ceremony. Prefer Strategy, Factory, Builder, Adapter, Decorator when they simplify variability or construction.
+- Avoid God objects, feature envy, and deep inheritance; prefer composition and interface-driven design.
+- Keep dependency injection explicit; limit static helpers to pure functions without hidden state.
+
+## Testing – Unit
+- Bias to fast, isolated tests with AAA structure; one behavior per test; descriptive names.
+- Mock only true collaborators; assert observable outcomes; cover edge/error/boundary cases.
+- Keep tests deterministic and independent; prefer table-driven tests for combinatorics.
+
+## Testing – Integration & Contracts
+- Use integration tests for wiring, persistence, and boundary adapters; use ephemeral infra (e.g., Testcontainers).
+- Keep fixtures minimal and realistic; ensure reliable setup/teardown; track and fix flaky tests.
+- Add consumer/provider contract tests for service interactions where appropriate.
+
+## Quality Gates & Build Hygiene
+- Lint and static analysis must be clean; treat serious warnings as errors where feasible.
+- Keep dependency graphs minimal and explicit; align versions (BOM where applicable); remove unused deps.
+- Ensure reproducible builds; provide clear local vs CI profiles and developer onboarding docs.
+
+## Safe Refactoring
+- Preserve public contracts and observable behavior; add/strengthen tests before risky changes.
+- Migrate incrementally; keep PRs small and focused; provide before/after snippets when proposing changes.
+
+---
+
+# Optional Packs (Only When Asked)
+
+The following packs are **inactive** by default. Activate one by explicitly asking for it by name or keywords in your request. If not requested, ignore these packs entirely.
+
+## Pack: Hexagonal Architecture (activate when asked: “hexagonal architecture”, “ports and adapters”, “hex arch”)
+- Model domain as a pure core. Define inbound/outbound ports (interfaces) in the domain.
+- Implement adapters at the edges (web, persistence, messaging); keep the domain framework-agnostic.
+- Map DTOs at boundaries; do not leak JPA/entities across domain boundaries.
+- Enforce package layers (domain, application/use-cases, adapters) and explicit dependencies inward.
+- Drive design with use cases and domain events; keep transactional boundaries at application services.
+
+## Pack: REST API Best Practices (activate when asked: “rest”, “rest api best practices”, “http api”)
+- Use resource-oriented nouns; consistent pluralization. Use standard HTTP methods/status codes.
+- Support pagination/filtering/sorting via query params; ensure idempotency for PUT/DELETE and safe retries.
+- Validate inputs with clear, structured error payloads; define a versioning and media-type strategy.
+- Provide concise OpenAPI docs and examples; ensure consistent naming and response envelopes.
+
+## Pack: Spring Data Utilization (activate when asked: “spring data”, “spring-boot-data”, “spring repository”)
+- Keep repositories interface-driven and domain-focused; prefer derived queries; use `@Query` sparingly.
+- Avoid leaking JPA entities outside the domain boundary; use transactions at application service layer.
+- Control fetch strategies and pagination; consider projections for read-models.
+- Test with slice tests and ephemeral databases; keep persistence tests deterministic with realistic seeds.

@@ -1,0 +1,244 @@
+{
+  "info": {
+    "name": "Car Appraisal - Client Flow",
+    "description": "Collection representing the client user journey",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "telegramId",
+      "value": "111222333",
+      "type": "string",
+      "description": "Client Telegram ID"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string",
+      "description": "Order ID (set after creating order)"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Register/Login Client",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.collectionVariables.set('userId', jsonData.id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"telegramId\": 111222333\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "register"]
+        },
+        "description": "Register a new client or login if already exists"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Current User Info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/me?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "me"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Get current user information"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Create Order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.collectionVariables.set('orderId', jsonData.id);",
+              "    console.log('Order created with ID: ' + jsonData.id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"carAdUrl\": \"https://example.com/car-ad/12345\",\n  \"carLocation\": \"Kyiv, Ukraine\",\n  \"carPrice\": 50000.00\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Create a new car appraisal order"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Get Order Details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders", "{{orderId}}"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Get order details by order ID"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Pay for Order",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}/pay?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders", "{{orderId}}", "pay"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Pay for the order (dummy payment - changes status to PAID)"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Change Order Status to APPRAISOR_SEARCH",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"APPRAISOR_SEARCH\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders/{{orderId}}/status?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders", "{{orderId}}", "status"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Change order status to APPRAISOR_SEARCH (usually automatic after payment)"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Get All Orders",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/orders?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "orders"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Get all orders for the current client"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Get Report by Order ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/reports/orders/{{orderId}}?telegramId={{telegramId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "reports", "orders", "{{orderId}}"],
+          "query": [
+            {
+              "key": "telegramId",
+              "value": "{{telegramId}}"
+            }
+          ]
+        },
+        "description": "Download the appraisal report PDF for the order"
+      },
+      "response": []
+    }
+  ]
+}
+

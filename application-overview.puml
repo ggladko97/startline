@@ -1,0 +1,150 @@
+@startuml Application Overview
+
+title Appraise Service - Complete Application Flow Overview
+
+skinparam componentStyle rectangle
+
+' ============================================
+' Main Components
+' ============================================
+
+package "HTTP Request" {
+  component [Client/Telegram Bot] as Client
+}
+
+package "Web Layer (Adapters)" #LightBlue {
+  component [UserController] as UserCtrl
+  component [OrderController] as OrderCtrl
+  component [ReportController] as ReportCtrl
+}
+
+package "Application Layer" #LightGreen {
+  component [UserService] as UserSvc
+  component [OrderService] as OrderSvc
+  component [ReportService] as ReportSvc
+}
+
+package "Domain Layer" #LightYellow {
+  component [Order] as OrderModel
+  component [User] as UserModel
+  component [Report] as ReportModel
+  component [OrderStatus] as StatusEnum
+}
+
+package "Ports (Interfaces)" #LightCoral {
+  component [UserRepository] as IUserRepo <<interface>>
+  component [OrderRepository] as IOrderRepo <<interface>>
+  component [ReportRepository] as IReportRepo <<interface>>
+  component [EventPublisher] as IEventPub <<interface>>
+  component [TelegramNotificationService] as ITelegram <<interface>>
+}
+
+package "Persistence Adapters" #LightGray {
+  component [OrderRepositoryAdapter] as OrderRepoAdapter
+  component [UserRepositoryAdapter] as UserRepoAdapter
+  component [ReportRepositoryAdapter] as ReportRepoAdapter
+  component [JPA Repositories] as JPA
+  component [PostgreSQL] as DB <<database>>
+}
+
+package "Messaging Adapters" #LightPink {
+  component [EventPublisherAdapter] as EventAdapter
+  component [OrderEventListener] as EventListener
+}
+
+package "External Services" #LightCyan {
+  component [TelegramNotificationServiceAdapter] as TelegramAdapter
+  component [Telegram API] as TelegramAPI <<cloud>>
+}
+
+' ============================================
+' Request Flow (Solid Lines)
+' ============================================
+
+Client --> UserCtrl : HTTP Request
+Client --> OrderCtrl : HTTP Request
+Client --> ReportCtrl : HTTP Request
+
+UserCtrl --> UserSvc : getUserByTelegramId()\ncreateOrLoginUser()\ncreateAppraiser()
+OrderCtrl --> OrderSvc : createOrder()\npayOrder()\nchangeOrderStatus()\nassignOrder()
+OrderCtrl --> UserSvc : getUserByTelegramId()
+ReportCtrl --> ReportSvc : createReport()\ngetReport()
+ReportCtrl --> UserSvc : getUserByTelegramId()
+
+UserSvc --> IUserRepo : <<uses>>
+OrderSvc --> IOrderRepo : <<uses>>
+OrderSvc --> IEventPub : <<uses>>
+ReportSvc --> IReportRepo : <<uses>>
+ReportSvc --> IOrderRepo : <<uses>>
+
+' ============================================
+' Adapter Implementations (Dashed Lines)
+' ============================================
+
+IUserRepo <|.. UserRepoAdapter : implements
+IOrderRepo <|.. OrderRepoAdapter : implements
+IReportRepo <|.. ReportRepoAdapter : implements
+IEventPub <|.. EventAdapter : implements
+ITelegram <|.. TelegramAdapter : implements
+
+UserRepoAdapter --> JPA : uses
+OrderRepoAdapter --> JPA : uses
+ReportRepoAdapter --> JPA : uses
+JPA --> DB : persists to
+
+' ============================================
+' Event Flow (Dotted Lines)
+' ============================================
+
+EventAdapter ..> EventListener : publishes events\n(OrderCreatedEvent,\nOrderStatusChangedEvent)
+EventListener ..> ITelegram : sendNotificationToAppraisers()
+TelegramAdapter --> TelegramAPI : HTTP POST\n/sendMessage
+
+' ============================================
+' Domain Models Usage
+' ============================================
+
+OrderSvc --> OrderModel : creates/updates
+UserSvc --> UserModel : creates/updates
+ReportSvc --> ReportModel : creates/updates
+OrderModel --> StatusEnum : uses
+
+' ============================================
+' Notes
+' ============================================
+
+note right of OrderSvc
+  **OrderService Responsibilities:**
+  • Create orders
+  • Process payments
+  • Manage status transitions
+  • Assign appraisers
+  • Validate business rules
+end note
+
+note right of EventListener
+  **Event-Driven Processing:**
+  • Async event handling
+  • OrderCreatedEvent → 
+    Notify appraisers
+    Auto-transition to APPRAISOR_SEARCH
+  • OrderStatusChangedEvent → 
+    Log status changes
+end note
+
+note bottom of OrderModel
+  **Order Status Flow:**
+  CREATED → PAID → APPRAISOR_SEARCH → 
+  ASSIGNED → IN_PROGRESS → 
+  DONE / COMPLETION_FAILURE
+end note
+
+note left of DB
+  **Persistence:**
+  • JPA entities mapped to domain models
+  • Repository adapters handle conversion
+  • PostgreSQL database
+end note
+
+@enduml
+
