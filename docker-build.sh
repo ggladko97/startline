@@ -25,3 +25,4 @@ echo "To view logs: docker-compose logs -f app"
 echo "To stop: docker-compose down"
 
 
+
